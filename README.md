@@ -37,6 +37,36 @@ Key fields:
 - `bot.check_interval`: seconds between loops
 - `bot.follow_back`: enable/disable follow-back behavior
 
+## Easy deployment options
+
+Option A — Docker (recommended for simplest "git pull && docker-compose up")
+
+- Build and run with Docker Compose:
+
+```bash
+docker-compose up --build -d
+```
+
+This mounts the JSON tracking files from the repository so they persist across restarts. Ensure `.env` contains your `MASTODON_ACCESS_TOKEN` before starting.
+
+Option B — systemd (run on a Linux server, uses local venv)
+
+- Place the `deploy/mastodon-bot.service` file into `/etc/systemd/system/` and edit `User`/paths if necessary, then:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now mastodon-bot
+sudo journalctl -u mastodon-bot -f
+```
+
+Option C — Docker with systemd
+
+- Use `deploy/mastodon-bot-docker.service` which runs `docker-compose` on boot; ensure Docker and docker-compose are installed.
+
+## GitHub Actions — optional
+
+A workflow is included at `.github/workflows/docker-build.yml`. It builds a Docker image on push to `main`. If you want the workflow to push to GitHub Container Registry, add a secret named `GHCR_PAT` with a token that has `write:packages` scope.
+
 ## Installing dependencies
 
 Use the included virtualenv or create one and install dependencies:

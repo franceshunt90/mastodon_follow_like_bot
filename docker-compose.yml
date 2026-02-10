@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  mastodon-bot:
+    build: .
+    container_name: mastodon-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./processed_posts.json:/app/processed_posts.json
+      - ./liked_posts.json:/app/liked_posts.json
+      - ./followed_accounts.json:/app/followed_accounts.json
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
