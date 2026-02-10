@@ -1,0 +1,53 @@
+# Mastodon instance settings
+# `instance_url`: The base URL of your Mastodon instance.
+# Example: https://mastodon.social or https://your.instance
+mastodon:
+  instance_url: "https://mastodon.social"
+
+# Accounts whose posts the bot should monitor and (optionally) repost.
+# Provide full acct handles if cross-instance, e.g. "alice@mastodon.social".
+accounts_to_monitor:
+  - "account1@mastodon.social"   # replace with accounts you want to monitor
+  - "account2@mastodon.social"
+
+# Like settings and per-account rules
+# `likes`: list of blocks defining which accounts to scan for liking posts.
+# Each entry supports:
+#   - account: acct handle to scan (required)
+#   - like_everything: true/false -> like every post
+#   - exclude_replies: true/false -> do not like replies
+#   - require_media: true/false -> only like posts with media
+#   - hashtags: list -> only like if status contains at least one tag
+likes:
+  - account: "account1@mastodon.social"
+    like_everything: true
+
+  - account: "account2@mastodon.social"
+    like_everything: false
+    hashtags:
+      - "music"
+      - "art"
+    require_media: false
+
+  - account: "account3@mastodon.social"
+    like_everything: true
+    exclude_replies: true
+
+# Global like settings
+like_settings:
+  # How many likes the bot may perform per check run
+  max_likes_per_check: 50
+
+# Bot behavior settings
+# `check_interval`: seconds between each loop iteration
+# `boost_only`: if true, only repost statuses containing media
+# `exclude_replies`: if true, skip replies when checking accounts_to_monitor
+# `exclude_reblogs`: if true, skip reblogs when checking accounts_to_monitor
+# `follow_back`: if true, the bot will follow new followers automatically
+bot:
+  check_interval: 300
+  boost_only: false
+  exclude_replies: false
+  exclude_reblogs: false
+  follow_back: true
+  follow_back: true
