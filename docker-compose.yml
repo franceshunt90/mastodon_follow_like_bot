@@ -6,7 +6,6 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: mastodon-bot
-    image: ghcr.io/franceshunt90/mastodon_follow_like_bot:latest
     restart: unless-stopped
     
     # Portainer/Docker labels for UI metadata
@@ -52,7 +51,6 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: mastodon-web
-    image: ghcr.io/franceshunt90/mastodon_follow_like_bot:latest
     restart: unless-stopped
 
     ports:
