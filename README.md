@@ -13,21 +13,18 @@ This bot monitors specified Mastodon accounts, automatically reposts (boosts) th
 ## Files
 
 - `mastodon_bot.py` — main bot implementation
-- `config.yaml` — single configuration file (contains mastodon instance, monitored accounts, like rules, and bot behavior). Comments explain each field.
-- `.env.example` — example environment variables (`MASTODON_ACCESS_TOKEN`, `MASTODON_INSTANCE_URL`). Copy to `.env` and fill in your token.
-- `.gitignore` — ignores `.env` and tracking files
+- `web_ui.py` — web UI for configuring instance, token, and account lists
+- `templates/index.html` — UI template
+- `static/styles.css` — UI styles
+- `config.yaml` — default configuration template (copied into the data volume on first run)
+- `.env` — placeholder env file for Portainer (real values set in the stack)
 - `requirements.txt` — Python dependencies
 
 ## Configuration
 
-1. Copy `.env.example` to `.env` and set your access token:
+1. Deploy the stack and open the web UI to set your instance, token, and account lists.
 
-```bash
-cp .env.example .env
-# edit .env and set MASTODON_ACCESS_TOKEN
-```
-
-2. Edit `config.yaml` and replace example accounts with the accounts you want to monitor and like. The file contains English comments indicating the purpose of each entry.
+2. `config.yaml` is used as a default template and is copied into the data volume on first run.
 
 Key fields:
 - `mastodon.instance_url`: URL of your instance (e.g. `https://mastodon.social`)
@@ -41,27 +38,13 @@ Key fields:
 
 Option A — Docker (recommended)
 
-- Quick pull/redeploy (same as "git pull" + stack redeploy):
+- Quick pull/redeploy:
 
 ```bash
-git pull && docker-compose pull && docker-compose up -d
+git pull && docker-compose up -d --build
 ```
 
-- Build and run with Docker Compose:
-- Option A1: Use the prebuilt image from GHCR (no local build):
-
-```bash
-docker-compose pull
-docker-compose up -d
-```
-
-- Option A2: Build locally from this repo:
-
-```bash
-docker-compose up --build -d
-```
-
-The compose file uses the image `ghcr.io/franceshunt90/mastodon_follow_like_bot:latest`. This mounts the JSON tracking files from the repository so they persist across restarts. Ensure `.env` contains your `MASTODON_ACCESS_TOKEN` before starting.
+The compose file builds locally and stores config/data in the `mastodon-bot-data` volume.
 
 Option B — systemd (run on a Linux server, uses local venv)
 
@@ -113,8 +96,8 @@ pkill -f mastodon_bot.py
 
 ## Notes & Safety
 
-- The bot acts as the account corresponding to the `MASTODON_ACCESS_TOKEN`. Do not commit real tokens to the repo.
-- `.env` is ignored by `.gitignore`. Use `.env.example` as template.
+- The bot acts as the account corresponding to the token you enter in the web UI. Do not commit real tokens to the repo.
+- The web UI stores the token encrypted using `TOKEN_ENC_KEY`.
 - The bot stores processed/liked/followed IDs in JSON files to avoid duplicates. These are also ignored by git.
 - Follow-back should be used carefully to avoid following abusive accounts.
 
