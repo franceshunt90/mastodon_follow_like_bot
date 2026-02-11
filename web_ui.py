@@ -488,10 +488,10 @@ def index():
     for item in config.get("likes", []) or []:
         if isinstance(item, dict) and item.get("account"):
             like_accounts.append(item["account"])
-  mastodon_cfg = config.get("mastodon", {})
-  can_edit_accounts = bool(
-    mastodon_cfg.get("instance_url") and mastodon_cfg.get("token_valid")
-  )
+    mastodon_cfg = config.get("mastodon", {})
+    can_edit_accounts = bool(
+      mastodon_cfg.get("instance_url") and mastodon_cfg.get("token_valid")
+    )
 
     status = request.args.get("status", "")
     status_error = request.args.get("error", "") == "1"
