@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ title }}</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' rx='20' fill='%236364FF'/%3E%3Cpath d='M28 66V36c0-8 6-14 14-14h11c8 0 15 6 15 14v30h-8V36c0-3-3-6-7-6H42c-3 0-6 3-6 6v30h-8z' fill='white'/%3E%3C/svg%3E" />
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' rx='20' fill='%236364FF'/%3E%3Cpath d='M28 66V36c0-8 6-14 14-14h11c8 0 15 6 15 14v30h-8V36c0-3-3-6-7-6H42c-3 0-6 3-6 6v30h-8z' fill='white'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+</head>
+<body>
+  <header>
+    <h1>{{ title }}</h1>
+    <p class="lead">Configure your instance, token, and boost/like lists.</p>
+  </header>
+  <main>
+    <div class="status-banner {{ 'error' if status_error else '' }} {{ '' if status else 'hidden' }}">
+      {{ status or '' }}
+    </div>
+
+    <div class="grid">
+      <div class="panel">
+        <h2>Instance + Token</h2>
+        <form method="post" action="{{ url_for('save_instance') }}">
+          <label for="instance_url">Instance URL</label>
+          <input id="instance_url" name="instance_url" type="text" value="{{ instance_url }}" placeholder="https://mastodon.social" />
+          <div class="actions">
+            <button type="submit">Save instance</button>
+          </div>
+        </form>
+
+        <form method="post" action="{{ url_for('save_token') }}" autocomplete="off">
+          <label for="access_token">Personal access token</label>
+          <input id="access_token" name="access_token" type="text" placeholder="Paste token" autocomplete="new-password" autocapitalize="off" spellcheck="false" />
+          <div class="actions">
+            <button type="submit">Save token</button>
+          </div>
+          <div class="hint">Token is stored encrypted and never shown again.</div>
+        </form>
+        <div class="note">Status: {{ token_status }}</div>
+      </div>
+
+      <div class="panel">
+        <h2>Boost accounts</h2>
+        <form method="post" action="{{ url_for('add_account') }}">
+          <div class="list-wrap {{ '' if can_edit_accounts else 'disabled' }}">
+            <label for="boost_input">Add account</label>
+            <div class="list-input">
+              <input id="boost_input" name="account" type="text" placeholder="user@instance" {{ 'disabled' if not can_edit_accounts else '' }} />
+              <input type="hidden" name="list_type" value="boost" />
+              <button type="submit" class="ghost">Add</button>
+            </div>
+            <div class="hint">These accounts are boosted (reposted).</div>
+          </div>
+        </form>
+        {% if not can_edit_accounts %}
+        <div class="note">Add accounts after instance + token are verified.</div>
+        {% endif %}
+      </div>
+
+      <div class="panel">
+        <h2>Like accounts</h2>
+        <form method="post" action="{{ url_for('add_account') }}">
+          <div class="list-wrap {{ '' if can_edit_accounts else 'disabled' }}">
+            <label for="like_input">Add account</label>
+            <div class="list-input">
+              <input id="like_input" name="account" type="text" placeholder="user@instance" {{ 'disabled' if not can_edit_accounts else '' }} />
+              <input type="hidden" name="list_type" value="like" />
+              <button type="submit" class="ghost">Add</button>
+            </div>
+            <div class="hint">Existing per-account rules are preserved.</div>
+          </div>
+        </form>
+        {% if not can_edit_accounts %}
+        <div class="note">Add accounts after instance + token are verified.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top: 18px;">
+      <h2>Current account lists</h2>
+      <div class="grid">
+        <div>
+          <label>Boosting</label>
+          <ul class="account-list">
+            {% if boost_accounts %}
+            {% for account in boost_accounts %}
+            <li class="account-item">
+              <span>{{ account }}</span>
+              <form method="post" action="{{ url_for('remove_account') }}">
+                <input type="hidden" name="list_type" value="boost" />
+                <input type="hidden" name="account" value="{{ account }}" />
+                <button type="submit" class="remove-x" title="Remove">×</button>
+              </form>
+            </li>
+            {% endfor %}
+            {% else %}
+            <li class="account-item">No accounts yet.</li>
+            {% endif %}
+          </ul>
+        </div>
+        <div>
+          <label>Liking</label>
+          <ul class="account-list">
+            {% if like_accounts %}
+            {% for account in like_accounts %}
+            <li class="account-item">
+              <span>{{ account }}</span>
+              <form method="post" action="{{ url_for('remove_account') }}">
+                <input type="hidden" name="list_type" value="like" />
+                <input type="hidden" name="account" value="{{ account }}" />
+                <button type="submit" class="remove-x" title="Remove">×</button>
+              </form>
+            </li>
+            {% endfor %}
+            {% else %}
+            <li class="account-item">No accounts yet.</li>
+            {% endif %}
+          </ul>
+        </div>
+      </div>
+      <div class="hint">Lists update after saving changes.</div>
+    </div>
+  </main>
+</body>
+</html>
