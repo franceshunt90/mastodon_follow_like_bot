@@ -41,6 +41,12 @@ Key fields:
 
 Option A — Docker (recommended)
 
+- Quick pull/redeploy (same as "git pull" + stack redeploy):
+
+```bash
+git pull && docker-compose pull && docker-compose up -d
+```
+
 - Build and run with Docker Compose:
 - Option A1: Use the prebuilt image from GHCR (no local build):
 
