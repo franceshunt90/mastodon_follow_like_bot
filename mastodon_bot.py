@@ -78,6 +78,17 @@ class MastodonRepostBot:
     def _load_config(self, config_path: str) -> dict:
         """Konfigurationsdatei laden"""
         try:
+            config_file = Path(config_path)
+            if not config_file.exists():
+                default_path = Path(os.getenv("DEFAULT_CONFIG_PATH", "config.yaml"))
+                if default_path.exists():
+                    with default_path.open('r', encoding='utf-8') as f:
+                        config = yaml.safe_load(f)
+                    if config:
+                        config_file.parent.mkdir(parents=True, exist_ok=True)
+                        with config_file.open('w', encoding='utf-8') as out:
+                            yaml.safe_dump(config, out)
+                    return config or {}
             with open(config_path, 'r', encoding='utf-8') as f:
                 config = yaml.safe_load(f)
                 logger.info(f"Configuration loaded: {config_path}")
@@ -430,7 +441,8 @@ class MastodonRepostBot:
 
 def main():
     """Main entry point"""
-    bot = MastodonRepostBot()
+    config_path = os.getenv("CONFIG_PATH", "config.yaml")
+    bot = MastodonRepostBot(config_path=config_path)
     bot.run()
 
 

@@ -20,6 +20,8 @@ services:
       - PYTHONUNBUFFERED=1
       - PYTHONDONTWRITEBYTECODE=1
       - TOKEN_ENC_KEY=${TOKEN_ENC_KEY}
+      - CONFIG_PATH=/app/data/config.yaml
+      - DEFAULT_CONFIG_PATH=/app/config.yaml
     
     # Load environment variables from .env
     env_file:
@@ -27,10 +29,7 @@ services:
     
     # Volume mounts for persistent data
     volumes:
-      - ./processed_posts.json:/app/processed_posts.json
-      - ./liked_posts.json:/app/liked_posts.json
-      - ./followed_accounts.json:/app/followed_accounts.json
-      - ./config.yaml:/app/config.yaml:ro
+      - mastodon-bot-data:/app/data
     
     # Logging configuration
     logging:
@@ -65,12 +64,17 @@ services:
       - OAUTH_SCOPES=read write follow
       - TOKEN_ENC_KEY=${TOKEN_ENC_KEY}
       - WEB_UI_SECRET=${WEB_UI_SECRET}
+      - CONFIG_PATH=/app/data/config.yaml
+      - DEFAULT_CONFIG_PATH=/app/config.yaml
 
     env_file:
       - .env
 
     volumes:
-      - ./config.yaml:/app/config.yaml
+      - mastodon-bot-data:/app/data
 
     command: ["python", "web_ui.py"]
+
+volumes:
+  mastodon-bot-data:
 
