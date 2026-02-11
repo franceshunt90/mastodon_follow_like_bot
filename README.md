@@ -39,15 +39,23 @@ Key fields:
 
 ## Easy deployment options
 
-Option A — Docker (recommended for simplest "git pull && docker-compose up")
+Option A — Docker (recommended)
 
 - Build and run with Docker Compose:
+- Option A1: Use the prebuilt image from GHCR (no local build):
+
+```bash
+docker-compose pull
+docker-compose up -d
+```
+
+- Option A2: Build locally from this repo:
 
 ```bash
 docker-compose up --build -d
 ```
 
-This mounts the JSON tracking files from the repository so they persist across restarts. Ensure `.env` contains your `MASTODON_ACCESS_TOKEN` before starting.
+The compose file uses the image `ghcr.io/franceshunt90/mastodon_follow_like_bot:latest`. This mounts the JSON tracking files from the repository so they persist across restarts. Ensure `.env` contains your `MASTODON_ACCESS_TOKEN` before starting.
 
 Option B — systemd (run on a Linux server, uses local venv)
 

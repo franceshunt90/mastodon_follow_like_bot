@@ -1,0 +1,53 @@
+# Git files
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+README.md
+*.md
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+.venv
+venv/
+ENV/
+env/
+*.egg-info
+dist/
+build/
+
+# IDEs
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment files (except .env.example)
+.env
+.env.local
+
+# Docker files (not needed in image)
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Deployment
+deploy/
+*.service
+
+# Testing
+.pytest_cache
+.coverage
+htmlcov/
+
+# Dependencies cache
+node_modules/

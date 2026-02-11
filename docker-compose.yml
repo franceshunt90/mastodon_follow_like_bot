@@ -2,17 +2,75 @@ version: '3.8'
 
 services:
   mastodon-bot:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: mastodon-bot
+    image: ghcr.io/franceshunt90/mastodon_follow_like_bot:latest
     restart: unless-stopped
+    
+    # Portainer/Docker labels for UI metadata
+    labels:
+      description: "Mastodon bot that automatically reposts and likes posts"
+      maintainer: "michael"
+      version: "1.0.0"
+    
+    # Environment configuration
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - TOKEN_ENC_KEY=${TOKEN_ENC_KEY}
+    
+    # Load environment variables from .env
     env_file:
       - .env
+    
+    # Volume mounts for persistent data
     volumes:
       - ./processed_posts.json:/app/processed_posts.json
       - ./liked_posts.json:/app/liked_posts.json
       - ./followed_accounts.json:/app/followed_accounts.json
+      - ./config.yaml:/app/config.yaml:ro
+    
+    # Logging configuration
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "3"
+        labels: "service=mastodon-bot"
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os; exit(0 if os.path.exists('/app') else 1)"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  mastodon-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mastodon-web
+    image: ghcr.io/franceshunt90/mastodon_follow_like_bot:latest
+    restart: unless-stopped
+
+    ports:
+      - "8081:8080"
+
+    environment:
+      - WEB_UI_PORT=8080
+      - WEB_UI_BASE_URL=https://mastobot.cloudklink.ipv64.de
+      - OAUTH_SCOPES=read write follow
+      - TOKEN_ENC_KEY=${TOKEN_ENC_KEY}
+      - WEB_UI_SECRET=${WEB_UI_SECRET}
+
+    env_file:
+      - .env
+
+    volumes:
+      - ./config.yaml:/app/config.yaml
+
+    command: ["python", "web_ui.py"]
+

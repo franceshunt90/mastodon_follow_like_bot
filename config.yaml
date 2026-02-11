@@ -7,8 +7,7 @@ mastodon:
 # Accounts whose posts the bot should monitor and (optionally) repost.
 # Provide full acct handles if cross-instance, e.g. "alice@mastodon.social".
 accounts_to_monitor:
-  - "account1@mastodon.social"   # replace with accounts you want to monitor
-  - "account2@mastodon.social"
+  - "BotStack@mastodon.social"
 
 # Like settings and per-account rules
 # `likes`: list of blocks defining which accounts to scan for liking posts.
@@ -19,24 +18,13 @@ accounts_to_monitor:
 #   - require_media: true/false -> only like posts with media
 #   - hashtags: list -> only like if status contains at least one tag
 likes:
-  - account: "account1@mastodon.social"
+  - account: "BotStack@mastodon.social"
     like_everything: true
-
-  - account: "account2@mastodon.social"
-    like_everything: false
-    hashtags:
-      - "music"
-      - "art"
-    require_media: false
-
-  - account: "account3@mastodon.social"
-    like_everything: true
-    exclude_replies: true
 
 # Global like settings
 like_settings:
   # How many likes the bot may perform per check run
-  max_likes_per_check: 50
+  max_likes_per_check: 100
 
 # Bot behavior settings
 # `check_interval`: seconds between each loop iteration
@@ -45,9 +33,8 @@ like_settings:
 # `exclude_reblogs`: if true, skip reblogs when checking accounts_to_monitor
 # `follow_back`: if true, the bot will follow new followers automatically
 bot:
-  check_interval: 300
+  check_interval: 60
   boost_only: false
   exclude_replies: false
   exclude_reblogs: false
-  follow_back: true
-  follow_back: true
+  follow_back: false

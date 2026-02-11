@@ -5,9 +5,9 @@ After=network.target
 [Service]
 Type=simple
 User=michael
-WorkingDirectory=/home/michael/mastodon-bot
-EnvironmentFile=/home/michael/mastodon-bot/.env
-ExecStart=/home/michael/mastodon-bot/.venv/bin/python /home/michael/mastodon-bot/mastodon_bot.py
+WorkingDirectory=/home/michael/SynologyDrive/Python Projects/mastodon_like_follow_bot
+EnvironmentFile=/home/michael/SynologyDrive/Python Projects/mastodon_like_follow_bot/.env
+ExecStart=/home/michael/SynologyDrive/Python Projects/mastodon_like_follow_bot/.venv/bin/python /home/michael/SynologyDrive/Python Projects/mastodon_like_follow_bot/mastodon_bot.py
 Restart=always
 RestartSec=10
 

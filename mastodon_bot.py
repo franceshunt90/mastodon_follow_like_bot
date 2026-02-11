@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import List, Dict, Set, Optional
 
 import yaml
+from cryptography.fernet import Fernet, InvalidToken
 from dotenv import load_dotenv
 from mastodon import Mastodon, MastodonAPIError
 
@@ -45,9 +46,11 @@ class MastodonRepostBot:
         self.processed_posts: Set[str] = set()
         self.liked_posts: Set[str] = set()
         self.followed_accounts: Set[str] = set()
-        self.processed_file = "processed_posts.json"
-        self.liked_file = "liked_posts.json"
-        self.followed_file = "followed_accounts.json"
+
+        data_dir = Path("/app/data") if Path("/app/data").exists() else Path(".")
+        self.processed_file = str(data_dir / "processed_posts.json")
+        self.liked_file = str(data_dir / "liked_posts.json")
+        self.followed_file = str(data_dir / "followed_accounts.json")
         self._load_processed_posts()
         self._load_liked_posts()
         self._load_followed_accounts()
@@ -97,6 +100,9 @@ class MastodonRepostBot:
         elif not instance_url:
             instance_url = 'https://mastodon.social'
         
+        if not access_token and 'mastodon' in self.config:
+            access_token = self._load_token_from_config(self.config['mastodon'])
+
         if not access_token:
             logger.error("MASTODON_ACCESS_TOKEN nicht in .env definiert")
             raise ValueError("Access Token fehlt")
@@ -108,6 +114,22 @@ class MastodonRepostBot:
         
         logger.info(f"Mit {instance_url} verbunden")
         return mastodon
+
+    def _load_token_from_config(self, mastodon_config: dict) -> Optional[str]:
+        """Load access token from config (encrypted preferred)."""
+        encrypted_token = mastodon_config.get('access_token_encrypted')
+        if encrypted_token:
+            key = os.getenv('TOKEN_ENC_KEY')
+            if not key:
+                logger.error("TOKEN_ENC_KEY fehlt fuer verschluesselten Token")
+                return None
+            try:
+                fernet = Fernet(key.encode())
+                return fernet.decrypt(encrypted_token.encode()).decode()
+            except (InvalidToken, ValueError) as exc:
+                logger.error(f"Token-Entschluesselung fehlgeschlagen: {exc}")
+                return None
+        return mastodon_config.get('access_token')
     
     def _load_processed_posts(self):
         """Load already processed (reposted) posts"""

@@ -5,7 +5,7 @@ Requires=docker.service
 
 [Service]
 Type=simple
-WorkingDirectory=/home/michael/mastodon-bot
+WorkingDirectory=/home/michael/SynologyDrive/Python Projects/mastodon_like_follow_bot
 ExecStart=/usr/bin/docker-compose up --build
 ExecStop=/usr/bin/docker-compose down
 Restart=always
