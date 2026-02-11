@@ -9,6 +9,7 @@ from typing import Dict, List, Optional
 
 from cryptography.fernet import Fernet
 from flask import Flask, redirect, render_template_string, request, url_for
+import requests
 from ruamel.yaml import YAML
 
 
@@ -185,6 +186,18 @@ TEMPLATE = """
       background: #ffe5e5;
       color: #b53a3a;
     }
+    .account-item .remove-x {
+      width: 26px;
+      height: 26px;
+      padding: 0;
+      border-radius: 999px;
+      font-weight: 800;
+      line-height: 1;
+    }
+    .disabled {
+      opacity: 0.6;
+      pointer-events: none;
+    }
   </style>
 </head>
 <body>
@@ -210,7 +223,7 @@ TEMPLATE = """
 
         <form method="post" action="{{ url_for('save_token') }}" autocomplete="off">
           <label for="access_token">Personal access token</label>
-          <input id="access_token" name="access_token" type="text" placeholder="Paste token" autocomplete="off" autocapitalize="off" spellcheck="false" />
+          <input id="access_token" name="access_token" type="text" placeholder="Paste token" autocomplete="new-password" autocapitalize="off" spellcheck="false" />
           <div class="actions">
             <button type="submit">Save token</button>
           </div>
@@ -222,32 +235,38 @@ TEMPLATE = """
       <div class="panel">
         <h2>Boost accounts</h2>
         <form method="post" action="{{ url_for('save_accounts') }}" data-list-form="boost">
-          <div class="list-wrap">
+          <div class="list-wrap {{ '' if can_edit_accounts else 'disabled' }}">
             <label for="boost_input">Add account</label>
             <div class="list-input">
-              <input id="boost_input" type="text" placeholder="user@instance" />
+              <input id="boost_input" type="text" placeholder="user@instance" {{ 'disabled' if not can_edit_accounts else '' }} />
               <button type="button" class="ghost" data-add="boost">Add</button>
             </div>
             <ul class="account-list" data-list="boost"></ul>
             <input type="hidden" name="boost_accounts" id="boost_accounts" />
             <div class="hint">These accounts are boosted (reposted).</div>
           </div>
+          {% if not can_edit_accounts %}
+          <div class="note">Add accounts after instance + token are verified.</div>
+          {% endif %}
         </form>
       </div>
 
       <div class="panel">
         <h2>Like accounts</h2>
         <form method="post" action="{{ url_for('save_accounts') }}" data-list-form="like">
-          <div class="list-wrap">
+          <div class="list-wrap {{ '' if can_edit_accounts else 'disabled' }}">
             <label for="like_input">Add account</label>
             <div class="list-input">
-              <input id="like_input" type="text" placeholder="user@instance" />
+              <input id="like_input" type="text" placeholder="user@instance" {{ 'disabled' if not can_edit_accounts else '' }} />
               <button type="button" class="ghost" data-add="like">Add</button>
             </div>
             <ul class="account-list" data-list="like"></ul>
             <input type="hidden" name="like_accounts" id="like_accounts" />
             <div class="hint">Existing per-account rules are preserved.</div>
           </div>
+          {% if not can_edit_accounts %}
+          <div class="note">Add accounts after instance + token are verified.</div>
+          {% endif %}
         </form>
       </div>
     </div>
@@ -312,6 +331,23 @@ TEMPLATE = """
         const li = document.createElement("li");
         li.className = "account-item";
         li.textContent = item;
+        const removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.className = "remove-x";
+        removeBtn.textContent = "×";
+        removeBtn.addEventListener("click", () => {
+          const index = items.indexOf(item);
+          if (index >= 0) {
+            items.splice(index, 1);
+            renderList(listName, items);
+            renderSummary(listName, items);
+            const form = document.querySelector(`[data-list-form="${listName}"]`);
+            if (form) {
+              form.submit();
+            }
+          }
+        });
+        li.appendChild(removeBtn);
         list.appendChild(li);
       });
       if (!items.length) {
@@ -327,6 +363,10 @@ TEMPLATE = """
       const input = document.getElementById(`${listName}_input`);
       const addBtn = document.querySelector(`[data-add="${listName}"]`);
       const form = document.querySelector(`[data-list-form="${listName}"]`);
+
+      if (!input || !addBtn) {
+        return;
+      }
 
       addBtn.addEventListener("click", () => {
         const value = normalizeHandle(input.value);
@@ -426,6 +466,20 @@ def _get_instance_url(config: Dict) -> str:
     return (config.get("mastodon", {}) or {}).get("instance_url", "")
 
 
+def _validate_token(instance_url: str, token: str) -> bool:
+  if not instance_url or not token:
+    return False
+  try:
+    response = requests.get(
+      f"{instance_url.rstrip('/')}/api/v1/accounts/verify_credentials",
+      headers={"Authorization": f"Bearer {token}"},
+      timeout=10,
+    )
+    return response.status_code == 200
+  except requests.RequestException:
+    return False
+
+
 @app.get("/")
 def index():
     config = _load_config()
@@ -434,6 +488,10 @@ def index():
     for item in config.get("likes", []) or []:
         if isinstance(item, dict) and item.get("account"):
             like_accounts.append(item["account"])
+  mastodon_cfg = config.get("mastodon", {})
+  can_edit_accounts = bool(
+    mastodon_cfg.get("instance_url") and mastodon_cfg.get("token_valid")
+  )
 
     status = request.args.get("status", "")
     status_error = request.args.get("error", "") == "1"
@@ -445,6 +503,7 @@ def index():
         boost_accounts=boost_accounts,
         like_accounts=like_accounts,
         token_status=_token_status(config),
+        can_edit_accounts=can_edit_accounts,
         status=status,
         status_error=status_error,
     )
@@ -458,6 +517,7 @@ def save_instance():
         return redirect(url_for("index", status="Instance URL required.", error="1"))
 
     config.setdefault("mastodon", {})["instance_url"] = instance_url
+  config["mastodon"]["token_valid"] = False
     _save_config(config)
     return redirect(url_for("index", status="Instance saved."))
 
@@ -470,10 +530,14 @@ def save_token():
 
     config = _load_config()
     try:
+    instance_url = _get_instance_url(config)
+    if not _validate_token(instance_url, token):
+      return redirect(url_for("index", status="Token validation failed.", error="1"))
         config.setdefault("mastodon", {})["access_token_encrypted"] = _encrypt_token(token)
         config["mastodon"].pop("access_token", None)
+    config["mastodon"]["token_valid"] = True
         _save_config(config)
-        return redirect(url_for("index", status="Token stored."))
+    return redirect(url_for("index", status="Token verified and stored."))
     except Exception as exc:
         return redirect(url_for("index", status=f"Token save failed: {exc}", error="1"))
 
@@ -481,6 +545,9 @@ def save_token():
 @app.post("/save-accounts")
 def save_accounts():
     config = _load_config()
+  mastodon_cfg = config.get("mastodon", {})
+  if not (mastodon_cfg.get("instance_url") and mastodon_cfg.get("token_valid")):
+    return redirect(url_for("index", status="Save token first.", error="1"))
     if "boost_accounts" in request.form:
         boost_accounts = _normalize_accounts(request.form.get("boost_accounts", ""))
         config["accounts_to_monitor"] = boost_accounts
