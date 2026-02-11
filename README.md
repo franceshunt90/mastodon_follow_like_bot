@@ -22,9 +22,14 @@ This bot monitors specified Mastodon accounts, automatically reposts (boosts) th
 
 ## Configuration
 
-1. Deploy the stack and open the web UI to set your instance, token, and account lists.
+1. Deploy the stack.
 
-2. `config.yaml` is used as a default template and is copied into the data volume on first run.
+2. Open the web UI and enter:
+	- Your Mastodon instance URL
+	- Your personal access token
+	- The accounts to boost and like
+
+3. The app stores its config in the `mastodon-bot-data` volume. The `config.yaml` in the repo is only a template.
 
 Key fields:
 - `mastodon.instance_url`: URL of your instance (e.g. `https://mastodon.social`)
@@ -45,6 +50,18 @@ git pull && docker-compose up -d --build
 ```
 
 The compose file builds locally and stores config/data in the `mastodon-bot-data` volume.
+
+### Portainer (recommended for most users)
+
+1. Stacks → Add stack
+2. Repository URL: `https://github.com/franceshunt90/mastodon_follow_like_bot.git`
+3. Compose path: `docker-compose.yml`
+4. Set these environment variables in the stack:
+	- `TOKEN_ENC_KEY` (required)
+	- `WEB_UI_SECRET` (recommended)
+5. Deploy the stack
+
+Open the web UI and finish setup (instance, token, and account lists).
 
 Option B — systemd (run on a Linux server, uses local venv)
 
