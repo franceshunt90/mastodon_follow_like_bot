@@ -131,5 +131,3 @@ pkill -f mastodon_bot.py
 - Add unit tests for config parsing and decision logic
 
 ---
-
-If you want, I can also create a small `README` section describing how to set up a GitHub Actions workflow to run this bot on a server or runner. Let me know.
