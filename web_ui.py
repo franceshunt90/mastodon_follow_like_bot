@@ -257,6 +257,21 @@ TEMPLATE = """
         </form>
       </div>
     </div>
+
+    <div class="panel" style="margin-top: 18px;">
+      <h2>Current account lists</h2>
+      <div class="grid">
+        <div>
+          <label>Boosting</label>
+          <ul class="account-list" data-summary="boost"></ul>
+        </div>
+        <div>
+          <label>Liking</label>
+          <ul class="account-list" data-summary="like"></ul>
+        </div>
+      </div>
+      <div class="hint">Lists update after saving changes.</div>
+    </div>
   </main>
 
   <script>
@@ -288,6 +303,26 @@ TEMPLATE = """
       hidden.value = items.join("\n");
     }
 
+    function renderSummary(listName, items) {
+      const list = document.querySelector(`[data-summary="${listName}"]`);
+      if (!list) {
+        return;
+      }
+      list.innerHTML = "";
+      items.forEach((item) => {
+        const li = document.createElement("li");
+        li.className = "account-item";
+        li.textContent = item;
+        list.appendChild(li);
+      });
+      if (!items.length) {
+        const empty = document.createElement("li");
+        empty.className = "account-item";
+        empty.textContent = "No accounts yet.";
+        list.appendChild(empty);
+      }
+    }
+
     function setupList(listName, initialItems) {
       const items = [...initialItems];
       const input = document.getElementById(`${listName}_input`);
@@ -312,6 +347,7 @@ TEMPLATE = """
       });
 
       renderList(listName, items);
+      renderSummary(listName, items);
     }
 
     setupList("boost", initialBoost);
