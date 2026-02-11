@@ -483,6 +483,16 @@ def _encrypt_token(token: str) -> str:
     return fernet.encrypt(token.encode()).decode()
 
 
+def _decrypt_token(token: str) -> Optional[str]:
+  fernet = _get_fernet()
+  if not fernet:
+    return None
+  try:
+    return fernet.decrypt(token.encode()).decode()
+  except Exception:
+    return None
+
+
 def _token_status(config: Dict) -> str:
     if not _get_fernet():
         return "TOKEN_ENC_KEY missing or invalid."
@@ -512,9 +522,31 @@ def _validate_token(instance_url: str, token: str) -> bool:
         return False
 
 
+  def _maybe_update_token_valid(config: Dict) -> Dict:
+    mastodon_cfg = config.get("mastodon", {})
+    if mastodon_cfg.get("token_valid") is not None:
+      return config
+    instance_url = mastodon_cfg.get("instance_url")
+    if not instance_url:
+      return config
+    encrypted = mastodon_cfg.get("access_token_encrypted")
+    plain = mastodon_cfg.get("access_token")
+    token = None
+    if encrypted:
+      token = _decrypt_token(encrypted)
+    elif plain:
+      token = plain
+    if not token:
+      return config
+    mastodon_cfg["token_valid"] = _validate_token(instance_url, token)
+    _save_config(config)
+    return config
+
+
 @app.get("/")
 def index():
-    config = _load_config()
+  config = _load_config()
+  config = _maybe_update_token_valid(config)
     boost_accounts = config.get("accounts_to_monitor", []) or []
     like_accounts = []
     for item in config.get("likes", []) or []:
