@@ -79,6 +79,9 @@ TEMPLATE = """
       border: 1px solid #bce6c9;
       color: var(--good);
     }
+    .status-banner.hidden {
+      display: none;
+    }
     .status-banner.error {
       background: #ffecec;
       border-color: #f1bdbd;
@@ -206,9 +209,9 @@ TEMPLATE = """
     <p class="lead">Configure your instance, token, and boost/like lists.</p>
   </header>
   <main>
-    {% if status %}
-    <div class="status-banner {{ 'error' if status_error else '' }}">{{ status }}</div>
-    {% endif %}
+    <div id="statusBanner" class="status-banner {{ 'error' if status_error else '' }} {{ '' if status else 'hidden' }}">
+      {{ status or '' }}
+    </div>
 
     <div class="grid">
       <div class="panel">
@@ -310,10 +313,7 @@ TEMPLATE = """
           items.splice(index, 1);
           renderList(listName, items);
           renderSummary(listName, items);
-          const form = document.querySelector(`[data-list-form="${listName}"]`);
-          if (form) {
-            form.submit();
-          }
+          saveList(listName, items);
         });
         li.appendChild(removeBtn);
         list.appendChild(li);
@@ -341,10 +341,7 @@ TEMPLATE = """
             items.splice(index, 1);
             renderList(listName, items);
             renderSummary(listName, items);
-            const form = document.querySelector(`[data-list-form="${listName}"]`);
-            if (form) {
-              form.submit();
-            }
+            saveList(listName, items);
           }
         });
         li.appendChild(removeBtn);
@@ -358,11 +355,48 @@ TEMPLATE = """
       }
     }
 
+    function setStatus(text, isError) {
+      const banner = document.getElementById("statusBanner");
+      if (!banner) {
+        return;
+      }
+      banner.textContent = text || "";
+      banner.classList.remove("hidden");
+      banner.classList.toggle("error", Boolean(isError));
+    }
+
+    function saveList(listName, items) {
+      const form = document.querySelector(`[data-list-form="${listName}"]`);
+      if (!form) {
+        return;
+      }
+      const hidden = document.getElementById(`${listName}_accounts`);
+      if (hidden) {
+        hidden.value = items.join("\n");
+      }
+
+      const formData = new FormData(form);
+      fetch(form.action, {
+        method: "POST",
+        body: formData,
+        redirect: "follow",
+      })
+        .then((response) => {
+          const url = response.url || "";
+          const hasError = url.includes("error=1");
+          const statusMatch = url.match(/[?&]status=([^&]+)/);
+          const message = statusMatch ? decodeURIComponent(statusMatch[1].replace(/\+/g, " ")) : "Saved.";
+          setStatus(message, hasError);
+        })
+        .catch(() => {
+          setStatus("Failed to save accounts.", true);
+        });
+    }
+
     function setupList(listName, initialItems) {
       const items = [...initialItems];
       const input = document.getElementById(`${listName}_input`);
       const addBtn = document.querySelector(`[data-add="${listName}"]`);
-      const form = document.querySelector(`[data-list-form="${listName}"]`);
 
       if (!input || !addBtn) {
         return;
@@ -378,9 +412,7 @@ TEMPLATE = """
         input.value = "";
         renderList(listName, items);
         renderSummary(listName, items);
-        if (form) {
-          form.submit();
-        }
+        saveList(listName, items);
       });
 
       input.addEventListener("keydown", (event) => {
@@ -490,7 +522,7 @@ def index():
             like_accounts.append(item["account"])
     mastodon_cfg = config.get("mastodon", {})
     can_edit_accounts = bool(
-      mastodon_cfg.get("instance_url") and mastodon_cfg.get("token_valid")
+        mastodon_cfg.get("instance_url") and mastodon_cfg.get("token_valid")
     )
 
     status = request.args.get("status", "")
