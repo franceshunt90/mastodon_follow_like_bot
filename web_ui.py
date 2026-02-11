@@ -230,9 +230,6 @@ TEMPLATE = """
             </div>
             <ul class="account-list" data-list="boost"></ul>
             <input type="hidden" name="boost_accounts" id="boost_accounts" />
-            <div class="actions">
-              <button type="submit">Save boost list</button>
-            </div>
             <div class="hint">These accounts are boosted (reposted).</div>
           </div>
         </form>
@@ -249,9 +246,6 @@ TEMPLATE = """
             </div>
             <ul class="account-list" data-list="like"></ul>
             <input type="hidden" name="like_accounts" id="like_accounts" />
-            <div class="actions">
-              <button type="submit">Save like list</button>
-            </div>
             <div class="hint">Existing per-account rules are preserved.</div>
           </div>
         </form>
@@ -296,6 +290,11 @@ TEMPLATE = """
         removeBtn.addEventListener("click", () => {
           items.splice(index, 1);
           renderList(listName, items);
+          renderSummary(listName, items);
+          const form = document.querySelector(`[data-list-form="${listName}"]`);
+          if (form) {
+            form.submit();
+          }
         });
         li.appendChild(removeBtn);
         list.appendChild(li);
@@ -327,6 +326,7 @@ TEMPLATE = """
       const items = [...initialItems];
       const input = document.getElementById(`${listName}_input`);
       const addBtn = document.querySelector(`[data-add="${listName}"]`);
+      const form = document.querySelector(`[data-list-form="${listName}"]`);
 
       addBtn.addEventListener("click", () => {
         const value = normalizeHandle(input.value);
@@ -337,6 +337,10 @@ TEMPLATE = """
         items.push(value);
         input.value = "";
         renderList(listName, items);
+        renderSummary(listName, items);
+        if (form) {
+          form.submit();
+        }
       });
 
       input.addEventListener("keydown", (event) => {
