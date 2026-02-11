@@ -368,14 +368,14 @@ def oauth_start():
       client_secret = oauth_cfg.get("client_secret")
       if not client_id or not client_secret:
         return redirect(url_for("index", status="OAuth app registration failed.", error="1"))
-        state = secrets.token_urlsafe(24)
-        session["oauth_state"] = state
+      state = secrets.token_urlsafe(24)
+      session["oauth_state"] = state
 
-        mastodon = Mastodon(
+      mastodon = Mastodon(
         client_id=client_id,
         client_secret=client_secret,
-            api_base_url=instance_url,
-        )
+        api_base_url=instance_url,
+      )
         auth_url = mastodon.auth_request_url(
             redirect_uris=oauth_cfg["redirect_uri"],
             scopes=oauth_cfg.get("scopes", OAUTH_SCOPES),
@@ -404,15 +404,15 @@ def oauth_callback():
         return redirect(url_for("index", status="OAuth code missing.", error="1"))
 
     try:
-      client_id = oauth_cfg.get("client_id")
-      client_secret = oauth_cfg.get("client_secret")
-      if not client_id or not client_secret:
-        return redirect(url_for("index", status="OAuth app missing client credentials.", error="1"))
-      mastodon = Mastodon(
-        client_id=client_id,
-        client_secret=client_secret,
-        api_base_url=instance_url,
-      )
+        client_id = oauth_cfg.get("client_id")
+        client_secret = oauth_cfg.get("client_secret")
+        if not client_id or not client_secret:
+            return redirect(url_for("index", status="OAuth app missing client credentials.", error="1"))
+        mastodon = Mastodon(
+            client_id=client_id,
+            client_secret=client_secret,
+            api_base_url=instance_url,
+        )
         token = mastodon.log_in(
             code=code,
             redirect_uri=oauth_cfg["redirect_uri"],
