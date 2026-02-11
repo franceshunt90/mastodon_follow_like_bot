@@ -288,10 +288,10 @@ def _get_instance_url(config: Dict) -> str:
 
 def _ensure_oauth_app(config: Dict, instance_url: str) -> Dict:
     mastodon_cfg = config.setdefault("mastodon", {})
-  oauth_cfg = mastodon_cfg.setdefault("oauth", {})
-  if not isinstance(oauth_cfg, dict):
-    oauth_cfg = {}
-    mastodon_cfg["oauth"] = oauth_cfg
+    oauth_cfg = mastodon_cfg.setdefault("oauth", {})
+    if not isinstance(oauth_cfg, dict):
+        oauth_cfg = {}
+        mastodon_cfg["oauth"] = oauth_cfg
 
     if oauth_cfg.get("client_id") and oauth_cfg.get("client_secret"):
         return config
@@ -363,9 +363,9 @@ def oauth_start():
         config = _ensure_oauth_app(config, instance_url)
         _save_config(config)
 
-      oauth_cfg = (config.get("mastodon", {}) or {}).get("oauth", {})
-      if not oauth_cfg.get("client_id") or not oauth_cfg.get("client_secret"):
-        return redirect(url_for("index", status="OAuth app registration failed.", error="1"))
+        oauth_cfg = (config.get("mastodon", {}) or {}).get("oauth", {})
+        if not oauth_cfg.get("client_id") or not oauth_cfg.get("client_secret"):
+            return redirect(url_for("index", status="OAuth app registration failed.", error="1"))
         state = secrets.token_urlsafe(24)
         session["oauth_state"] = state
 
