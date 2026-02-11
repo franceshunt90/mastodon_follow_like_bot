@@ -467,17 +467,17 @@ def _get_instance_url(config: Dict) -> str:
 
 
 def _validate_token(instance_url: str, token: str) -> bool:
-  if not instance_url or not token:
-    return False
-  try:
-    response = requests.get(
-      f"{instance_url.rstrip('/')}/api/v1/accounts/verify_credentials",
-      headers={"Authorization": f"Bearer {token}"},
-      timeout=10,
-    )
-    return response.status_code == 200
-  except requests.RequestException:
-    return False
+    if not instance_url or not token:
+        return False
+    try:
+        response = requests.get(
+            f"{instance_url.rstrip('/')}/api/v1/accounts/verify_credentials",
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=10,
+        )
+        return response.status_code == 200
+    except requests.RequestException:
+        return False
 
 
 @app.get("/")
@@ -517,7 +517,7 @@ def save_instance():
         return redirect(url_for("index", status="Instance URL required.", error="1"))
 
     config.setdefault("mastodon", {})["instance_url"] = instance_url
-  config["mastodon"]["token_valid"] = False
+    config["mastodon"]["token_valid"] = False
     _save_config(config)
     return redirect(url_for("index", status="Instance saved."))
 
@@ -545,9 +545,9 @@ def save_token():
 @app.post("/save-accounts")
 def save_accounts():
     config = _load_config()
-  mastodon_cfg = config.get("mastodon", {})
-  if not (mastodon_cfg.get("instance_url") and mastodon_cfg.get("token_valid")):
-    return redirect(url_for("index", status="Save token first.", error="1"))
+    mastodon_cfg = config.get("mastodon", {})
+    if not (mastodon_cfg.get("instance_url") and mastodon_cfg.get("token_valid")):
+        return redirect(url_for("index", status="Save token first.", error="1"))
     if "boost_accounts" in request.form:
         boost_accounts = _normalize_accounts(request.form.get("boost_accounts", ""))
         config["accounts_to_monitor"] = boost_accounts
