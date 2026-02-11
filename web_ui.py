@@ -530,14 +530,14 @@ def save_token():
 
     config = _load_config()
     try:
-    instance_url = _get_instance_url(config)
-    if not _validate_token(instance_url, token):
-      return redirect(url_for("index", status="Token validation failed.", error="1"))
+        instance_url = _get_instance_url(config)
+        if not _validate_token(instance_url, token):
+            return redirect(url_for("index", status="Token validation failed.", error="1"))
         config.setdefault("mastodon", {})["access_token_encrypted"] = _encrypt_token(token)
         config["mastodon"].pop("access_token", None)
-    config["mastodon"]["token_valid"] = True
+        config["mastodon"]["token_valid"] = True
         _save_config(config)
-    return redirect(url_for("index", status="Token verified and stored."))
+        return redirect(url_for("index", status="Token verified and stored."))
     except Exception as exc:
         return redirect(url_for("index", status=f"Token save failed: {exc}", error="1"))
 
