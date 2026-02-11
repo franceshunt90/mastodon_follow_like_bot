@@ -2,6 +2,8 @@
 
 This bot monitors specified Mastodon accounts, automatically reposts (boosts) their posts according to configurable rules, likes posts from configured accounts using per-account filters, and can optionally follow back new followers.
 
+Note: This project was created with the help of AI.
+
 ## Features
 
 - Monitor a list of accounts and repost (boost) new statuses
