@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
 """
-Small web UI to configure the bot with OAuth and account lists.
+Small web UI to configure the bot with token-based setup and account lists.
 """
 
 import os
-import secrets
 from pathlib import Path
 from typing import Dict, List, Optional
 
 from cryptography.fernet import Fernet
-from flask import Flask, redirect, render_template_string, request, session, url_for
-from mastodon import Mastodon
+from flask import Flask, redirect, render_template_string, request, url_for
 from ruamel.yaml import YAML
 
 
@@ -18,11 +16,9 @@ APP_TITLE = "Mastodon Bot Setup"
 CONFIG_PATH = os.getenv("CONFIG_PATH", "config.yaml")
 HOST = os.getenv("WEB_UI_HOST", "0.0.0.0")
 PORT = int(os.getenv("WEB_UI_PORT", "8080"))
-BASE_URL = os.getenv("WEB_UI_BASE_URL", "http://localhost:8080")
-OAUTH_SCOPES = os.getenv("OAUTH_SCOPES", "read write follow")
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = os.getenv("WEB_UI_SECRET", secrets.token_hex(32))
+app.config["SECRET_KEY"] = os.getenv("WEB_UI_SECRET", "dev-secret")
 
 yaml = YAML(typ="rt")
 yaml.preserve_quotes = True
@@ -35,28 +31,33 @@ TEMPLATE = """
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{{ title }}</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' rx='20' fill='%236364FF'/%3E%3Cpath d='M28 66V36c0-8 6-14 14-14h11c8 0 15 6 15 14v30h-8V36c0-3-3-6-7-6H42c-3 0-6 3-6 6v30h-8z' fill='white'/%3E%3C/svg%3E" />
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' rx='20' fill='%236364FF'/%3E%3Cpath d='M28 66V36c0-8 6-14 14-14h11c8 0 15 6 15 14v30h-8V36c0-3-3-6-7-6H42c-3 0-6 3-6 6v30h-8z' fill='white'/%3E%3C/svg%3E" />
   <style>
     :root {
-      --bg: #f7f5f0;
-      --ink: #232323;
-      --muted: #6b6b6b;
-      --accent: #ff6a3d;
+      --bg: #e7e8ff;
+      --ink: #1f1f2e;
+      --muted: #4b4f73;
+      --accent: #6364ff;
+      --accent-dark: #4b4de0;
       --panel: #ffffff;
-      --border: #e4e0d9;
+      --border: #d7d9f2;
+      --good: #2a7b4f;
+      --bad: #b53a3a;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
       font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
       color: var(--ink);
-      background: radial-gradient(circle at 20% 0%, #fff3e8 0%, var(--bg) 40%, #f1efe9 100%);
+      background: radial-gradient(circle at 10% 10%, #ffffff 0%, #f1f2ff 25%, var(--bg) 70%);
     }
     header {
-      padding: 28px 24px 10px;
+      padding: 26px 24px 10px;
     }
     h1 {
       margin: 0;
-      font-size: 28px;
+      font-size: 30px;
       letter-spacing: 0.2px;
     }
     p.lead {
@@ -68,6 +69,20 @@ TEMPLATE = """
       margin: 0 auto;
       padding: 18px 24px 40px;
     }
+    .status-banner {
+      margin: 14px 0 18px;
+      padding: 14px 16px;
+      border-radius: 12px;
+      font-weight: 600;
+      background: #e8fff2;
+      border: 1px solid #bce6c9;
+      color: var(--good);
+    }
+    .status-banner.error {
+      background: #ffecec;
+      border-color: #f1bdbd;
+      color: var(--bad);
+    }
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -76,12 +91,12 @@ TEMPLATE = """
     .panel {
       background: var(--panel);
       border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 16px;
-      box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: 0 10px 24px rgba(99, 100, 255, 0.12);
     }
     h2 {
-      margin: 0 0 10px;
+      margin: 0 0 12px;
       font-size: 18px;
     }
     label {
@@ -89,7 +104,7 @@ TEMPLATE = """
       font-weight: 600;
       margin-bottom: 8px;
     }
-    input[type=text], textarea {
+    input[type=text] {
       width: 100%;
       padding: 10px 12px;
       border: 1px solid var(--border);
@@ -97,11 +112,7 @@ TEMPLATE = """
       font-family: "JetBrains Mono", "Menlo", monospace;
       font-size: 13px;
       line-height: 1.5;
-      background: #fffaf7;
-    }
-    textarea {
-      min-height: 200px;
-      resize: vertical;
+      background: #f7f7ff;
     }
     .hint {
       margin-top: 8px;
@@ -124,99 +135,188 @@ TEMPLATE = """
       font-weight: 700;
       cursor: pointer;
       transition: transform 120ms ease, box-shadow 120ms ease;
-      box-shadow: 0 8px 18px rgba(255, 106, 61, 0.28);
+      box-shadow: 0 10px 22px rgba(99, 100, 255, 0.28);
     }
-    button.secondary {
-      background: #2c3e50;
-      box-shadow: 0 8px 18px rgba(44, 62, 80, 0.25);
+    button:hover { transform: translateY(-1px); }
+    button.ghost {
+      background: #eef0ff;
+      color: var(--accent-dark);
+      box-shadow: none;
+      border: 1px solid #d5d8ff;
     }
     .note {
       margin-top: 6px;
       color: var(--muted);
       font-size: 12px;
     }
-    .status {
-      margin-top: 10px;
-      padding: 8px 10px;
-      border-radius: 8px;
-      background: #e9ffe6;
-      border: 1px solid #c2f2bb;
-      color: #1f6f2a;
+    .list-wrap {
+      display: grid;
+      gap: 10px;
+    }
+    .list-input {
+      display: flex;
+      gap: 8px;
+    }
+    .list-input input { flex: 1; }
+    ul.account-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 8px;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+    .account-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #fbfbff;
+      font-family: "JetBrains Mono", "Menlo", monospace;
       font-size: 13px;
     }
-    .status.error {
-      background: #ffe9e9;
-      border-color: #f2bcbc;
-      color: #8a1f1f;
+    .account-item button {
+      padding: 6px 10px;
+      font-size: 12px;
+      box-shadow: none;
+      background: #ffe5e5;
+      color: #b53a3a;
     }
   </style>
 </head>
 <body>
   <header>
     <h1>{{ title }}</h1>
-    <p class="lead">Wizard to connect Mastodon and configure boost/like accounts.</p>
+    <p class="lead">Configure your instance, token, and boost/like lists.</p>
   </header>
   <main>
+    {% if status %}
+    <div class="status-banner {{ 'error' if status_error else '' }}">{{ status }}</div>
+    {% endif %}
+
     <div class="grid">
       <div class="panel">
-        <h2>1) Mastodon instance</h2>
+        <h2>Instance + Token</h2>
         <form method="post" action="{{ url_for('save_instance') }}">
           <label for="instance_url">Instance URL</label>
           <input id="instance_url" name="instance_url" type="text" value="{{ instance_url }}" placeholder="https://mastodon.social" />
           <div class="actions">
             <button type="submit">Save instance</button>
           </div>
-          <div class="hint">Used for OAuth + API calls.</div>
         </form>
-      </div>
 
-      <div class="panel">
-        <h2>2) Connect account</h2>
-        <div class="actions">
-          <form method="get" action="{{ url_for('oauth_start') }}">
-            <button type="submit" class="secondary">Connect with Mastodon</button>
-          </form>
-        </div>
-        <form method="post" action="{{ url_for('save_token') }}">
-          <label for="access_token">Or paste a personal access token</label>
-          <input id="access_token" name="access_token" type="text" placeholder="Paste token" />
+        <form method="post" action="{{ url_for('save_token') }}" autocomplete="off">
+          <label for="access_token">Personal access token</label>
+          <input id="access_token" name="access_token" type="text" placeholder="Paste token" autocomplete="off" autocapitalize="off" spellcheck="false" />
           <div class="actions">
             <button type="submit">Save token</button>
           </div>
-          <div class="hint">Token is stored encrypted at rest. It is never shown again.</div>
+          <div class="hint">Token is stored encrypted and never shown again.</div>
         </form>
         <div class="note">Status: {{ token_status }}</div>
       </div>
 
       <div class="panel">
-        <h2>3) Boost accounts</h2>
-        <form method="post" action="{{ url_for('save_accounts') }}">
-          <label for="boost_accounts">Boost list</label>
-          <textarea id="boost_accounts" name="boost_accounts">{{ boost_accounts }}</textarea>
-          <div class="hint">One handle per line. Format: user@instance</div>
-          <div class="actions">
-            <button type="submit">Save accounts</button>
+        <h2>Boost accounts</h2>
+        <form method="post" action="{{ url_for('save_accounts') }}" data-list-form="boost">
+          <div class="list-wrap">
+            <label for="boost_input">Add account</label>
+            <div class="list-input">
+              <input id="boost_input" type="text" placeholder="user@instance" />
+              <button type="button" class="ghost" data-add="boost">Add</button>
+            </div>
+            <ul class="account-list" data-list="boost"></ul>
+            <input type="hidden" name="boost_accounts" id="boost_accounts" />
+            <div class="actions">
+              <button type="submit">Save boost list</button>
+            </div>
+            <div class="hint">These accounts are boosted (reposted).</div>
           </div>
         </form>
       </div>
 
       <div class="panel">
-        <h2>4) Like accounts</h2>
-        <form method="post" action="{{ url_for('save_accounts') }}">
-          <label for="like_accounts">Like list</label>
-          <textarea id="like_accounts" name="like_accounts">{{ like_accounts }}</textarea>
-          <div class="hint">Existing per-account rules are preserved.</div>
-          <div class="actions">
-            <button type="submit">Save accounts</button>
+        <h2>Like accounts</h2>
+        <form method="post" action="{{ url_for('save_accounts') }}" data-list-form="like">
+          <div class="list-wrap">
+            <label for="like_input">Add account</label>
+            <div class="list-input">
+              <input id="like_input" type="text" placeholder="user@instance" />
+              <button type="button" class="ghost" data-add="like">Add</button>
+            </div>
+            <ul class="account-list" data-list="like"></ul>
+            <input type="hidden" name="like_accounts" id="like_accounts" />
+            <div class="actions">
+              <button type="submit">Save like list</button>
+            </div>
+            <div class="hint">Existing per-account rules are preserved.</div>
           </div>
         </form>
       </div>
     </div>
-
-    {% if status %}
-    <div class="status {{ 'error' if status_error else '' }}">{{ status }}</div>
-    {% endif %}
   </main>
+
+  <script>
+    const initialBoost = {{ boost_accounts | tojson }};
+    const initialLike = {{ like_accounts | tojson }};
+
+    function normalizeHandle(value) {
+      return value.trim();
+    }
+
+    function renderList(listName, items) {
+      const list = document.querySelector(`[data-list="${listName}"]`);
+      const hidden = document.getElementById(`${listName}_accounts`);
+      list.innerHTML = "";
+      items.forEach((item, index) => {
+        const li = document.createElement("li");
+        li.className = "account-item";
+        li.textContent = item;
+        const removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.textContent = "Remove";
+        removeBtn.addEventListener("click", () => {
+          items.splice(index, 1);
+          renderList(listName, items);
+        });
+        li.appendChild(removeBtn);
+        list.appendChild(li);
+      });
+      hidden.value = items.join("\n");
+    }
+
+    function setupList(listName, initialItems) {
+      const items = [...initialItems];
+      const input = document.getElementById(`${listName}_input`);
+      const addBtn = document.querySelector(`[data-add="${listName}"]`);
+
+      addBtn.addEventListener("click", () => {
+        const value = normalizeHandle(input.value);
+        if (!value || items.includes(value)) {
+          input.value = "";
+          return;
+        }
+        items.push(value);
+        input.value = "";
+        renderList(listName, items);
+      });
+
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          addBtn.click();
+        }
+      });
+
+      renderList(listName, items);
+    }
+
+    setupList("boost", initialBoost);
+    setupList("like", initialLike);
+  </script>
 </body>
 </html>
 """
@@ -286,44 +386,14 @@ def _get_instance_url(config: Dict) -> str:
     return (config.get("mastodon", {}) or {}).get("instance_url", "")
 
 
-def _ensure_oauth_app(config: Dict, instance_url: str) -> Dict:
-    mastodon_cfg = config.setdefault("mastodon", {})
-    oauth_cfg = mastodon_cfg.setdefault("oauth", {})
-    if not isinstance(oauth_cfg, dict):
-        oauth_cfg = {}
-        mastodon_cfg["oauth"] = oauth_cfg
-
-    if oauth_cfg.get("client_id") and oauth_cfg.get("client_secret"):
-        return config
-
-    client_id, client_secret = Mastodon.create_app(
-        "Mastobot Web UI",
-        api_base_url=instance_url,
-        redirect_uris=f"{BASE_URL}/oauth/callback",
-        scopes=OAUTH_SCOPES,
-    )
-
-    oauth_cfg.update(
-        {
-            "client_id": client_id,
-            "client_secret": client_secret,
-            "redirect_uri": f"{BASE_URL}/oauth/callback",
-            "scopes": OAUTH_SCOPES,
-        }
-    )
-
-    return config
-
-
 @app.get("/")
 def index():
     config = _load_config()
-    boost_accounts = "\n".join(config.get("accounts_to_monitor", []) or [])
+    boost_accounts = config.get("accounts_to_monitor", []) or []
     like_accounts = []
     for item in config.get("likes", []) or []:
         if isinstance(item, dict) and item.get("account"):
             like_accounts.append(item["account"])
-    like_accounts_text = "\n".join(like_accounts)
 
     status = request.args.get("status", "")
     status_error = request.args.get("error", "") == "1"
@@ -333,7 +403,7 @@ def index():
         title=APP_TITLE,
         instance_url=_get_instance_url(config),
         boost_accounts=boost_accounts,
-        like_accounts=like_accounts_text,
+        like_accounts=like_accounts,
         token_status=_token_status(config),
         status=status,
         status_error=status_error,
@@ -350,80 +420,6 @@ def save_instance():
     config.setdefault("mastodon", {})["instance_url"] = instance_url
     _save_config(config)
     return redirect(url_for("index", status="Instance saved."))
-
-
-@app.get("/oauth/start")
-def oauth_start():
-    config = _load_config()
-    instance_url = _get_instance_url(config)
-    if not instance_url:
-        return redirect(url_for("index", status="Set instance URL first.", error="1"))
-
-    try:
-        config = _ensure_oauth_app(config, instance_url)
-        _save_config(config)
-        config = _load_config()
-        oauth_cfg = (config.get("mastodon", {}) or {}).get("oauth", {})
-        client_id = oauth_cfg.get("client_id")
-        client_secret = oauth_cfg.get("client_secret")
-        if not client_id or not client_secret:
-            return redirect(url_for("index", status="OAuth app registration failed.", error="1"))
-        state = secrets.token_urlsafe(24)
-        session["oauth_state"] = state
-
-        mastodon = Mastodon(
-            client_id=client_id,
-            client_secret=client_secret,
-            api_base_url=instance_url,
-        )
-        auth_url = mastodon.auth_request_url(
-            redirect_uris=oauth_cfg["redirect_uri"],
-            scopes=oauth_cfg.get("scopes", OAUTH_SCOPES),
-            state=state,
-        )
-        return redirect(auth_url)
-    except Exception as exc:
-        return redirect(url_for("index", status=f"OAuth start failed: {exc}", error="1"))
-
-
-@app.get("/oauth/callback")
-def oauth_callback():
-    config = _load_config()
-    instance_url = _get_instance_url(config)
-    oauth_cfg = (config.get("mastodon", {}) or {}).get("oauth", {})
-
-    if not instance_url or not oauth_cfg:
-        return redirect(url_for("index", status="OAuth not initialized.", error="1"))
-
-    state = request.args.get("state")
-    if not state or state != session.get("oauth_state"):
-        return redirect(url_for("index", status="Invalid OAuth state.", error="1"))
-
-    code = request.args.get("code")
-    if not code:
-        return redirect(url_for("index", status="OAuth code missing.", error="1"))
-
-    try:
-        client_id = oauth_cfg.get("client_id")
-        client_secret = oauth_cfg.get("client_secret")
-        if not client_id or not client_secret:
-            return redirect(url_for("index", status="OAuth app missing client credentials.", error="1"))
-        mastodon = Mastodon(
-            client_id=client_id,
-            client_secret=client_secret,
-            api_base_url=instance_url,
-        )
-        token = mastodon.log_in(
-            code=code,
-            redirect_uri=oauth_cfg["redirect_uri"],
-            scopes=oauth_cfg.get("scopes", OAUTH_SCOPES),
-        )
-        config.setdefault("mastodon", {})["access_token_encrypted"] = _encrypt_token(token)
-        config["mastodon"].pop("access_token", None)
-        _save_config(config)
-        return redirect(url_for("index", status="OAuth token stored."))
-    except Exception as exc:
-        return redirect(url_for("index", status=f"OAuth failed: {exc}", error="1"))
 
 
 @app.post("/save-token")
