@@ -224,20 +224,20 @@ TEMPLATE = """
 
 def _load_config() -> Dict:
     config_path = Path(CONFIG_PATH)
-  if not config_path.exists():
-    default_path = Path(os.getenv("DEFAULT_CONFIG_PATH", "config.yaml"))
-    if default_path.exists():
-      config = yaml.load(default_path) or {}
-      _save_config(config)
-      return config
-    return {}
+    if not config_path.exists():
+        default_path = Path(os.getenv("DEFAULT_CONFIG_PATH", "config.yaml"))
+        if default_path.exists():
+            config = yaml.load(default_path) or {}
+            _save_config(config)
+            return config
+        return {}
     with config_path.open("r", encoding="utf-8") as handle:
         return yaml.load(handle) or {}
 
 
 def _save_config(config: Dict) -> None:
     config_path = Path(CONFIG_PATH)
-  config_path.parent.mkdir(parents=True, exist_ok=True)
+    config_path.parent.mkdir(parents=True, exist_ok=True)
     with config_path.open("w", encoding="utf-8") as handle:
         yaml.dump(config, handle)
 
